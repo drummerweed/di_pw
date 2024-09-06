@@ -1,9 +1,13 @@
 #!/usr/bin/env zsh -f
-# Purpose: Updated for Alfred 4
+# Purpose: Updated for Alfred 5
 #
 # From:	Timothy J. Luoma
 # Mail:	luomat at gmail dot com
 # Date:	2019-05-29
+#
+# Updated by: Patrick Weed
+# On Date: 2024-09-05
+# Notes: Changed to work for Alfred 5
 
 NAME="$0:t:r"
 
@@ -11,13 +15,13 @@ NAME="$0:t:r"
 
 [[ -e "$HOME/.config/di/defaults.sh" ]] && source "$HOME/.config/di/defaults.sh"
 
-INSTALL_TO="${INSTALL_DIR_ALTERNATE-/Applications}/Alfred 4.app"
+INSTALL_TO="${INSTALL_DIR_ALTERNATE-/Applications}/Alfred 5.app"
 
 	## Regular Releases
-# XML_FEED='https://www.alfredapp.com/app/update4/general.xml'
+# XML_FEED='https://www.alfredapp.com/app/update5/general.xml'
 
 	## Beta Releases
-XML_FEED='https://www.alfredapp.com/app/update4/prerelease.xml'
+XML_FEED='https://www.alfredapp.com/app/update5/general.xml'
 
 PLIST="${TMPDIR-/tmp}/${NAME}.$$.$RANDOM.plist"
 
@@ -118,7 +122,7 @@ echo "$NAME: Extracting '$FILENAME' to '$TEMPDIR':"
 
 tar -C "$TEMPDIR" -z -x -f "$FILENAME"
 
-TEMPAPP="$TEMPDIR/Alfred 4.app"
+TEMPAPP="$TEMPDIR/Alfred 5.app"
 
 if [[ ! -d "$TEMPAPP" ]]
 then
@@ -146,7 +150,7 @@ then
 		# Quit app, if running
 	pgrep -xq "Alfred" \
 	&& LAUNCH='yes' \
-	&& osascript -e 'tell application "Alfred 4" to quit'
+	&& osascript -e 'tell application "Alfred 5" to quit'
 
 		# move installed version to trash
 	mv -vf "$INSTALL_TO" "$HOME/.Trash/$INSTALL_TO:t.$INSTALLED_VERSION.app"

@@ -4,6 +4,10 @@
 # From:	Timothy J. Luoma
 # Mail:	luomat at gmail dot com
 # Date:	2021-09-20
+#
+# Updated by: Patrick Weed
+# On Date: 2024-09-05
+# Notes: Changed to work for Bartender 5
 
 autoload is-at-least
 
@@ -13,9 +17,9 @@ NAME="$0:t:r"
 
 [[ -e "$HOME/.config/di/defaults.sh" ]] && source "$HOME/.config/di/defaults.sh"
 
-INSTALL_TO="${INSTALL_DIR_ALTERNATE-/Applications}/Bartender 4.app"
+INSTALL_TO="${INSTALL_DIR_ALTERNATE-/Applications}/Bartender 5.app"
 
-XML_FEED='https://www.macbartender.com/B2/updates/updatesB4.php'
+XML_FEED='https://www.macbartender.com/B2/updates/AppcastB5.xml'
 
 	# replace newlines, spaces, tabs, with one space
 	# replace everything up to <item>
@@ -27,27 +31,52 @@ XML_FEED='https://www.macbartender.com/B2/updates/updatesB4.php'
 	# egrep to get just the lines we want
 	# use awk to get just the values and not the fields
 
+# INFO=($(curl -sfLS "$XML_FEED" \
+# 	| tr -s '\012| |\t' ' ' \
+# 	| sed 	-e 's#.*<item>##g' \
+# 		-e 's#</item>.*##g' \
+# 		-e 's#> <#>\
+# <#g' -e 's# #\
+# #g' -e 's#<sparkle:minimumSystemVersion>#sparkle:minimumSystemVersion="#g' \
+# 		-e 's#</sparkle:minimumSystemVersion>#"#g' \
+# 		-e 's#<sparkle:releaseNotesLink>#sparkle:releaseNotesLink="#g' \
+# 		-e 's#</sparkle:releaseNotesLink>#"#g' \
+# 	| sort \
+# 	| egrep 'sparkle:version|sparkle:shortVersionString|sparkle:releaseNotesLink|sparkle:minimumSystemVersion|url' \
+# 	| awk -F'"' '{print $2}' ))
+#
+## The above did not return the needed info into the proper variables
+
 INFO=($(curl -sfLS "$XML_FEED" \
-	| tr -s '\012| |\t' ' ' \
-	| sed 	-e 's#.*<item>##g' \
-		-e 's#</item>.*##g' \
-		-e 's#> <#>\
+    | tr -s '\012| |\t' ' ' \
+    | sed -e 's#.*<item>##g' \
+          -e 's#</item>.*##g' \
+          -e 's#> <#>\
 <#g' -e 's# #\
-#g' -e 's#<sparkle:minimumSystemVersion>#sparkle:minimumSystemVersion="#g' \
-		-e 's#</sparkle:minimumSystemVersion>#"#g' \
-		-e 's#<sparkle:releaseNotesLink>#sparkle:releaseNotesLink="#g' \
-		-e 's#</sparkle:releaseNotesLink>#"#g' \
-	| sort \
-	| egrep 'sparkle:version|sparkle:shortVersionString|sparkle:releaseNotesLink|sparkle:minimumSystemVersion|url' \
-	| awk -F'"' '{print $2}' ))
+#g' \
+          -e 's#<sparkle:minimumSystemVersion>#sparkle:minimumSystemVersion="#g' \
+          -e 's#</sparkle:minimumSystemVersion>#"#g' \
+          -e 's#<sparkle:releaseNotesLink>#sparkle:releaseNotesLink="#g' \
+          -e 's#</sparkle:releaseNotesLink>#"#g' \
+          -e 's#<sparkle:shortVersionString>#sparkle:shortVersionString="#g' \
+          -e 's#</sparkle:shortVersionString>#"#g' \
+          -e 's#<sparkle:version>#sparkle:version="#g' \
+          -e 's#</sparkle:version>#"#g' \
+    | sort \
+    | egrep 'sparkle:minimumSystemVersion|sparkle:releaseNotesLink|sparkle:shortVersionString|sparkle:version' \
+    | awk -F'"' '{print $2}' ))
 
 MIN_VERSION="$INFO[1]"
 RELEASE_NOTES_URL="$INFO[2]"
 LATEST_VERSION="$INFO[3]"
 LATEST_BUILD="$INFO[4]"
-URL="$INFO[5]"
+URL=$(curl -sfLS "$XML_FEED" \
+    | tr -s '\012| |\t' ' ' \
+    | sed -n -e 's#.*<enclosure url="\([^"]*\.zip\)".*#\1#p' \
+    | sort -u \
+    | tail -n1)
 
-	# If any of these are blank, we cannot continue
+# If any of these are blank, we cannot continue
 if [ "$INFO" = "" -o "$URL" = "" -o "$LATEST_VERSION" = "" -o "$LATEST_BUILD" = "" ]
 then
 	echo "$NAME: Error: bad data received:
@@ -112,7 +141,7 @@ else
 	FIRST_INSTALL='yes'
 fi
 
-FILENAME="${DOWNLOAD_DIR_ALTERNATE-$HOME/Downloads}/Bartender-${${LATEST_VERSION}// /}_${${LATEST_BUILD}// /}.zip"
+FILENAME="${DOWNLOAD_DIR_ALTERNATE-$HOME/Downloads}/Bartender-${LATEST_VERSION// /}_${LATEST_BUILD// /}.zip"
 
 RELEASE_NOTES_TXT="$FILENAME:r.txt"
 
@@ -123,7 +152,8 @@ then
 
 else
 
-	if (( $+commands[html2text.py] ))
+	if command -v html2text.py >/dev/null 2>&1
+
 	then
 			# html2text.py will give us something like markdown
 			# uniq will make sure we don't have more than one blank line in a row
@@ -203,10 +233,11 @@ fi
 
 if [[ -e "$INSTALL_TO" ]]
 then
+	APP_NAME=$(basename "$INSTALL_TO")
 
 	pgrep -xq "$INSTALL_TO:t:r" \
 	&& LAUNCH='yes' \
-	&& osascript -e "tell application \"$INSTALL_TO:t:r\" to quit"
+	&& osascript -e "tell application \"$APP_NAME:t:r\" to quit"
 
 	echo "$NAME: Moving existing (old) '$INSTALL_TO' to '$TEMPDIR/'."
 
